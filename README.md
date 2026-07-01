@@ -19,7 +19,7 @@ pi-subagents runs each sub-agent in its own process and sets `PI_SUBAGENT_CHILD=
 1. On load, returns immediately unless `PI_SUBAGENT_CHILD === "1"` — so it governs sub-agents only.
 2. Counts tool calls via the `tool_call` hook.
 3. Past **`soft`**, annotates each tool result with a "start writing your final report" nudge.
-4. At **`hard`**, **blocks** further **read/search** calls only — `read`, `grep`, `find`, `ls` (`{ block: true }`) — forcing the model to finalize. Report/output/messaging tools (and a plain-text final answer) are **never** blocked, so the agent can always deliver its report when told to stop.
+4. At **`hard`**, **blocks** the configured tools (`{ block: true }`) — by default the read/search set `read`, `grep`, `find`, `ls` — forcing the model to finalize. By default report/output/messaging tools (and a plain-text final answer) are **never** blocked, so the agent can always deliver its report when told to stop. The blocked set is configurable via `block=` (see [Configuration](#configuration)).
 
 Because each sub-agent is a separate process, the counter is naturally per-sub-agent — no shared state.
 
@@ -28,12 +28,14 @@ Because each sub-agent is a separate process, the counter is naturally per-sub-a
 The budget comes from the **launch wiring**, not the environment. Put a directive anywhere in the sub-agent's task text:
 
 ```
-[[toolbudget: soft=40 hard=60]]
+[[toolbudget: soft=40 hard=60 block=read,grep,find,ls]]
 ```
 
 - `soft` — start nudging after this many tool calls.
-- `hard` — block all tool calls beyond this many.
-- Either key may be omitted; a missing directive uses the built-in defaults **`soft=35`, `hard=60`**.
+- `hard` — block the configured tools beyond this many calls.
+- `block` — comma-separated tool names to block over budget. **Default: `read,grep,find,ls`** (the read/search tools that cause runaway browsing). Report/output/messaging tools, `bash`, and edits are left open so the final report can always be delivered.
+  - `block=*` blocks **every** tool over budget (strict). Only use it for sub-agents whose final report is plain assistant text — otherwise you may block the tool the agent needs to deliver its report (see [Limitations](#limitations)).
+- Any key may be omitted; a missing directive uses the built-in defaults **`soft=35`, `hard=60`, `block=read,grep,find,ls`**.
 
 There are **no environment variables** for the budget. `PI_SUBAGENT_CHILD` is read only to detect a sub-agent (pi-subagents sets it); it is not a configuration knob.
 
@@ -77,7 +79,7 @@ The first two calls run; the rest are blocked and the agent finalizes. In the to
 - **Global install required** (see above).
 - Pi's recorded `toolCount` counts *attempts*, so a blocked-and-retried call still increments it; what matters is that no read/search tool beyond `hard` actually **executes**.
 - The cap is structural, not semantic — set `hard` generously (default 60, past the p90 of ~49) so healthy runs are never truncated and only true runaways hit the wall.
-- **Only read/search tools are capped** (`read`, `grep`, `find`, `ls`). `bash`, edits, and report/output/messaging tools are intentionally left open so the final report is never blocked — the trade-off is that a runaway that browses via `bash` (e.g. repeated `cat`/`grep`) is not caught.
+- **By default only read/search tools are capped** (`read`, `grep`, `find`, `ls`). `bash`, edits, and report/output/messaging tools are left open so the final report is never blocked — the trade-off is that a runaway that browses via `bash` (e.g. repeated `cat`/`grep`) is not caught. Widen the set with `block=` (e.g. `block=read,grep,find,ls,bash`), or `block=*` to cap everything — but `block=*` can block the tool the agent needs to deliver its report, so use it only when the final report is plain assistant text.
 
 ## Publishing
 

@@ -15,27 +15,32 @@
  * Configuration comes from the LAUNCH WIRING, never the environment. Put a directive
  * anywhere in the sub-agent's task text:
  *
- *     [[toolbudget: soft=40 hard=60]]
+ *     [[toolbudget: soft=40 hard=60 block=read,grep,find,ls]]
  *
  * - `soft` — after this many calls, each tool result is annotated with a "wrap up now"
  *   nudge (the model may still call tools).
- * - `hard` — every further read/search call is blocked; the model must finalize.
+ * - `hard` — every further blocked tool call is stopped; the model must finalize.
+ * - `block` — comma-separated tool names blocked over budget (default: read,grep,find,ls).
+ *   Use `block=*` to block every tool (strict; see the deadlock note below).
  *
- * Either key may be omitted. With no directive, the built-in defaults below apply.
+ * Any key may be omitted. With no directive, the built-in defaults below apply.
  *
- * Only the read/search tools that cause runaway "browse the tree" behaviour are blocked
- * over budget. Report/output tools (and plain-text final answers) are always left open,
- * so the agent can still deliver its final report when told to stop.
+ * By default only the read/search tools that cause runaway "browse the tree" behaviour are
+ * blocked over budget; report/output tools (and plain-text final answers) are left open so
+ * the agent can still deliver its final report when told to stop. `block=*` overrides that
+ * and blocks everything — only use it for sub-agents whose final report is plain text, or
+ * you risk blocking the very tool the agent needs to deliver its report.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const DEFAULT_SOFT = 35;
 const DEFAULT_HARD = 60;
 
-// The investigation tools whose runaway use overflows context. Only these are blocked
-// past `hard`; anything else (a completion/output/messaging tool, or `bash`, or an edit
-// the agent needs to finish) stays available so the final report can always be delivered.
-const OVER_BUDGET_BLOCK = new Set(["read", "grep", "find", "ls"]);
+// The investigation tools whose runaway use overflows context. Blocked past `hard` by
+// default; anything else (a completion/output/messaging tool, or `bash`, or an edit the
+// agent needs to finish) stays available so the final report can always be delivered.
+// Override per task with `block=...` (or `block=*` for all tools).
+const DEFAULT_OVER_BUDGET_BLOCK = ["read", "grep", "find", "ls"];
 
 const DIRECTIVE = /\[\[\s*toolbudget:\s*([^\]]*)\]\]/i;
 
@@ -51,6 +56,8 @@ export default function toolbudget(pi: ExtensionAPI): void {
 
   let soft = DEFAULT_SOFT;
   let hard = DEFAULT_HARD;
+  let blocked = new Set(DEFAULT_OVER_BUDGET_BLOCK);
+  let blockAll = false;
   let count = 0;
 
   // Read the per-task budget from the task prompt (the launch wiring).
@@ -62,18 +69,25 @@ export default function toolbudget(pi: ExtensionAPI): void {
     if (s !== undefined) soft = s;
     if (h !== undefined) hard = h;
     if (hard < soft) hard = soft; // keep the hard stop at or past the soft nudge
+
+    const bm = m[1].match(/block\s*=\s*([a-z0-9_,*\-]+)/i);
+    if (bm) {
+      const list = bm[1].toLowerCase();
+      blockAll = list.split(",").map((t) => t.trim()).includes("*");
+      if (!blockAll) blocked = new Set(list.split(",").map((t) => t.trim()).filter(Boolean));
+    }
   });
 
-  // Hard cap: once the budget is spent, block further read/search calls only. Report/
-  // output/messaging tools stay open so the model can still deliver its final report.
+  // Hard cap: once the budget is spent, block the configured tools. By default only
+  // read/search tools, so report/output/messaging tools stay open and the model can
+  // still deliver its final report (unless `block=*` was set).
   pi.on("tool_call", async (event) => {
-    if (count >= hard && OVER_BUDGET_BLOCK.has(String(event?.toolName ?? ""))) {
+    if (count >= hard && (blockAll || blocked.has(String(event?.toolName ?? "")))) {
       return {
         block: true,
         reason:
-          `Tool budget exhausted (${count}/${hard} calls). Stop reading and searching and ` +
-          `write your final report NOW from what you have already gathered — reporting and ` +
-          `output tools remain available.`,
+          `Tool budget exhausted (${count}/${hard} calls). Stop and write your final report ` +
+          `NOW from what you have already gathered${blockAll ? "" : " — reporting and output tools remain available"}.`,
       };
     }
     count++;
