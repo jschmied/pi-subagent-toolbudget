@@ -19,14 +19,23 @@
  *
  * - `soft` — after this many calls, each tool result is annotated with a "wrap up now"
  *   nudge (the model may still call tools).
- * - `hard` — every further tool call is blocked; the model must finalize.
+ * - `hard` — every further read/search call is blocked; the model must finalize.
  *
  * Either key may be omitted. With no directive, the built-in defaults below apply.
+ *
+ * Only the read/search tools that cause runaway "browse the tree" behaviour are blocked
+ * over budget. Report/output tools (and plain-text final answers) are always left open,
+ * so the agent can still deliver its final report when told to stop.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const DEFAULT_SOFT = 35;
 const DEFAULT_HARD = 60;
+
+// The investigation tools whose runaway use overflows context. Only these are blocked
+// past `hard`; anything else (a completion/output/messaging tool, or `bash`, or an edit
+// the agent needs to finish) stays available so the final report can always be delivered.
+const OVER_BUDGET_BLOCK = new Set(["read", "grep", "find", "ls"]);
 
 const DIRECTIVE = /\[\[\s*toolbudget:\s*([^\]]*)\]\]/i;
 
@@ -55,14 +64,16 @@ export default function toolbudget(pi: ExtensionAPI): void {
     if (hard < soft) hard = soft; // keep the hard stop at or past the soft nudge
   });
 
-  // Hard cap: block every tool call once the budget is spent. The model must finalize.
-  pi.on("tool_call", async () => {
-    if (count >= hard) {
+  // Hard cap: once the budget is spent, block further read/search calls only. Report/
+  // output/messaging tools stay open so the model can still deliver its final report.
+  pi.on("tool_call", async (event) => {
+    if (count >= hard && OVER_BUDGET_BLOCK.has(String(event?.toolName ?? ""))) {
       return {
         block: true,
         reason:
-          `Tool budget exhausted (${count}/${hard} calls). Stop investigating and write ` +
-          `your final report NOW from what you have already gathered — do not call any more tools.`,
+          `Tool budget exhausted (${count}/${hard} calls). Stop reading and searching and ` +
+          `write your final report NOW from what you have already gathered — reporting and ` +
+          `output tools remain available.`,
       };
     }
     count++;

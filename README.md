@@ -19,7 +19,7 @@ pi-subagents runs each sub-agent in its own process and sets `PI_SUBAGENT_CHILD=
 1. On load, returns immediately unless `PI_SUBAGENT_CHILD === "1"` — so it governs sub-agents only.
 2. Counts tool calls via the `tool_call` hook.
 3. Past **`soft`**, annotates each tool result with a "start writing your final report" nudge.
-4. At **`hard`**, **blocks** every further tool call (`{ block: true }`), forcing the model to finalize.
+4. At **`hard`**, **blocks** further **read/search** calls only — `read`, `grep`, `find`, `ls` (`{ block: true }`) — forcing the model to finalize. Report/output/messaging tools (and a plain-text final answer) are **never** blocked, so the agent can always deliver its report when told to stop.
 
 Because each sub-agent is a separate process, the counter is naturally per-sub-agent — no shared state.
 
@@ -75,8 +75,9 @@ The first two calls run; the rest are blocked and the agent finalizes. In the to
 ## Limitations
 
 - **Global install required** (see above).
-- Pi's recorded `toolCount` counts *attempts*, so a blocked-and-retried call still increments it; what matters is that no tool beyond `hard` actually **executes**.
+- Pi's recorded `toolCount` counts *attempts*, so a blocked-and-retried call still increments it; what matters is that no read/search tool beyond `hard` actually **executes**.
 - The cap is structural, not semantic — set `hard` generously (default 60, past the p90 of ~49) so healthy runs are never truncated and only true runaways hit the wall.
+- **Only read/search tools are capped** (`read`, `grep`, `find`, `ls`). `bash`, edits, and report/output/messaging tools are intentionally left open so the final report is never blocked — the trade-off is that a runaway that browses via `bash` (e.g. repeated `cat`/`grep`) is not caught.
 
 ## Publishing
 
