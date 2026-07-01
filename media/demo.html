@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; }
+  body {
+    background: radial-gradient(1200px 630px at 78% 20%, #14243b 0%, #0d1117 60%);
+    color: #e6edf3;
+    font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 40px 60px 44px;
+    display: flex; flex-direction: column;
+  }
+  .kicker { color: #7d8590; font-size: 19px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+  h1 { font-size: 46px; font-weight: 800; margin-top: 8px; letter-spacing: -.01em; }
+  .tag { color: #9fb0c0; font-size: 21px; margin-top: 10px; max-width: 1040px; line-height: 1.38; }
+  .term {
+    margin-top: 22px; background: #0b0f14; border: 1px solid #21262d; border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.45); flex: 1; overflow: hidden;
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  .bar { height: 38px; background: #161b22; border-bottom: 1px solid #21262d; display: flex; align-items: center; padding: 0 16px; gap: 9px; }
+  .dot { width: 13px; height: 13px; border-radius: 50%; }
+  .r{background:#ff5f56}.y{background:#ffbd2e}.g{background:#27c93f}
+  .bar span { color: #6e7681; font-size: 15px; margin-left: 14px; }
+  .body { padding: 16px 26px; font-size: 19px; line-height: 1.46; }
+  .head { color: #58a6ff; }
+  .muted { color: #6e7681; }
+  .ok { color: #3fb950; }
+  .warn { color: #d29922; }
+  .block { color: #f85149; font-weight: 700; }
+  .note { color: #8b949e; }
+  .final { color: #3fb950; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="kicker">pi&nbsp;·&nbsp;companion for pi-subagents</div>
+  <h1>pi-subagent-toolbudget</h1>
+  <div class="tag">Caps a sub-agent's tool calls — soft nudge, then hard stop — so a runaway agent writes its final report instead of overflowing context. No-op outside sub-agents.</div>
+
+  <div class="term">
+    <div class="bar"><i class="dot r"></i><i class="dot y"></i><i class="dot g"></i><span>sub-agent: reviewer &nbsp;·&nbsp; [[toolbudget: soft=40 hard=60]]</span></div>
+    <div class="body">
+      <div class="ok">allow&nbsp;&nbsp;#1&nbsp;&nbsp;&nbsp;read&nbsp;&nbsp;OrderService.java</div>
+      <div class="ok">allow&nbsp;&nbsp;#2&nbsp;&nbsp;&nbsp;grep&nbsp;&nbsp;"resolveTotal"</div>
+      <div class="muted">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;⋮</div>
+      <div class="warn">allow&nbsp;&nbsp;#40&nbsp;&nbsp;read&nbsp;&nbsp;<span class="note">← soft: start writing your final report</span></div>
+      <div class="ok">allow&nbsp;&nbsp;#60&nbsp;&nbsp;ls</div>
+      <div class="block">BLOCK&nbsp;&nbsp;#61&nbsp;&nbsp;read&nbsp;&nbsp;<span class="note">← hard stop · report/output tools stay open</span></div>
+      <div style="height:10px"></div>
+      <div class="final">→ sub-agent delivers its report &nbsp;<span class="note">(exit 0, not a silent exit 1)</span></div>
+    </div>
+  </div>
+</body>
+</html>

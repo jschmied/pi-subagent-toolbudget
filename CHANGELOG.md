@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Add gallery preview image (`pi.image`) for pi.dev/packages.
+
 ## 0.1.0
 
 Initial release.
