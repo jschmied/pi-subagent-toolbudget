@@ -1,0 +1,47 @@
+{
+  "name": "pi-subagent-toolbudget",
+  "version": "0.1.0",
+  "description": "Companion extension for pi-subagents: caps a spawned sub-agent's tool calls (soft nudge + hard stop) so runaway agents finalize instead of overflowing context. No-op outside sub-agents.",
+  "author": "Jürgen Schmied <github@juergenschmied.de>",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jschmied/pi-subagent-toolbudget.git"
+  },
+  "homepage": "https://github.com/jschmied/pi-subagent-toolbudget#readme",
+  "bugs": {
+    "url": "https://github.com/jschmied/pi-subagent-toolbudget/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "pi-subagents",
+    "subagents",
+    "budget",
+    "guardrail",
+    "ai",
+    "agents",
+    "cli"
+  ],
+  "files": [
+    "src/**/*.ts",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": {
+      "optional": true
+    }
+  }
+}
