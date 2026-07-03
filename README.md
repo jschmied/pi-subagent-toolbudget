@@ -1,5 +1,8 @@
 # pi-subagent-toolbudget
 
+> [!NOTE]
+> **This feature got integrated into the main package** by https://github.com/nicobailon/pi-subagents/pull/391 — `pi-subagents` now ships a native `toolBudget` field. This standalone companion is superseded; prefer the built-in support.
+
 > Tool-call budget for pi-subagents: soft nudge + hard stop so runaway sub-agents finalize instead of overflowing context. No-op outside sub-agents.
 
 A companion [Pi](https://pi.dev) extension for **[pi-subagents](https://pi.dev/packages/pi-subagents)** that caps how many tool calls a spawned **sub-agent** may make — a soft "wrap up" nudge, then a hard stop — so a runaway agent produces a final report instead of overflowing its context window and dying.
